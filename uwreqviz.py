@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 
 kCourseTitleExpression = re.compile(
  "(?P<number>[A-Z]* [0-9]{3}) (?P<name>[^\(]*)\((?P<credits>[^\)]*)")
+kCourseNumberExpression = re.compile("[A-Z]+ [0-9]+")
 
 class Course(object):
     """
@@ -37,12 +38,16 @@ class Course(object):
         if i != -1:
             i += len(kReqToken)
             reqsText = courseText[i:courseText.find(".", i)]
-            prerequisites = [r.strip() for r in reqsText.split(";")]
+            # To do this really nicely, we should break the prerequisite
+            # language down to their OR/AND components, along with info about
+            # "recommended"/"instructor permission" etc.
+            prerequisites = re.findall(kCourseNumberExpression, reqsText)
         else:
             # None listed.
             prerequisites = ()
+            reqsText = None
 
-        return cls(number, name, credits, prerequisites)
+        return cls(number, name, credits, prerequisites, reqsText)
 
     @staticmethod
     def LinkPrerequisites(courses):
@@ -61,7 +66,7 @@ def ProduceGraph(url):
     soup = BeautifulSoup(response.read())
     response.close()
     courses = CoursesFromSoup(soup)
-    courses = Course.LinkPrerequisites(courses)
+    Course.LinkPrerequisites(courses)
 
 def LooksLikeCourseElement(tag):
     return (tag.name == "a" and 'name' in tag.attrs
