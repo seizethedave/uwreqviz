@@ -1,1 +1,2 @@
-graphviz
+graphviz==0.4.2
+beautifulsoup4==4.3.2
