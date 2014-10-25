@@ -14,24 +14,54 @@ kCourseTitleExpression = re.compile(
 class Course(object):
     """
     Represents a course.
-    Contains prerequisites.
     """
-    def __init__(self, number, name, credits):
+    def __init__(self, number, name, credits,
+     prerequisiteNumbers=(), prerequisiteText=None):
         self.number = number
         self.name = name
         self.credits = credits
+        self.prerequisiteNumbers = prerequisiteNumbers
+        self.prerequisiteText = prerequisiteText
 
     @classmethod
     def FromSoupTag(cls, soupTag):
         title = soupTag.p.b.text
         groups = re.match(kCourseTitleExpression, title).groups()
         number, name, credits = (g.strip() for g in groups)
-        return cls(number, name, credits)
+
+        # Now find the prerequisites string.
+        courseText = soupTag.text
+        kReqToken = "Prerequisite: "
+        i = courseText.find(kReqToken)
+
+        if i != -1:
+            i += len(kReqToken)
+            reqsText = courseText[i:courseText.find(".", i)]
+            prerequisites = [r.strip() for r in reqsText.split(";")]
+        else:
+            # None listed.
+            prerequisites = ()
+
+        return cls(number, name, credits, prerequisites)
+
+    @staticmethod
+    def LinkPrerequisites(courses):
+        """
+        Establishes links based on prerequisites.
+        """
+        courseLookup = {course.number: course for course in courses}
+
+        for course in courses:
+            # TODO: Create dummy Course items for course numbers outside the list.
+            prerequisites = (courseLookup.get(p) for p in course.prerequisiteNumbers)
+            course.prerequisites = list(filter(None, prerequisites))
 
 def ProduceGraph(url):
     response = request.urlopen(url)
     soup = BeautifulSoup(response.read())
     response.close()
+    courses = CoursesFromSoup(soup)
+    courses = Course.LinkPrerequisites(courses)
 
 def LooksLikeCourseElement(tag):
     return (tag.name == "a" and 'name' in tag.attrs
