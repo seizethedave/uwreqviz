@@ -2,8 +2,8 @@
 
 import sys
 import os
-from urllib import request
 import re
+from urllib import request
 
 import graphviz
 from bs4 import BeautifulSoup
@@ -44,7 +44,7 @@ class Course(object):
             prerequisites = re.findall(kCourseNumberExpression, reqsText)
         else:
             # None listed.
-            prerequisites = ()
+            prerequisites = []
             reqsText = None
 
         return cls(number, name, credits, prerequisites, reqsText)
@@ -52,13 +52,16 @@ class Course(object):
     @staticmethod
     def LinkPrerequisites(courses):
         """
-        Establishes links based on prerequisites.
+        Given a sequence of courses, establishes 'prerequisites' properties
+        based on the 'prerequisiteNumbers' property.
         """
         courseLookup = {course.number: course for course in courses}
 
         for course in courses:
-            # TODO: Create dummy Course items for course numbers outside the list.
-            prerequisites = (courseLookup.get(p) for p in course.prerequisiteNumbers)
+            # TODO: Create dummy Course items for course numbers outside the
+            # list.
+            prerequisites = (courseLookup.get(p)
+             for p in course.prerequisiteNumbers)
             course.prerequisites = list(filter(None, prerequisites))
 
 def ProduceGraph(url):
@@ -69,6 +72,12 @@ def ProduceGraph(url):
     Course.LinkPrerequisites(courses)
 
 def LooksLikeCourseElement(tag):
+    """
+    A predicate function for discocvering course tags.
+    Unfortunately, there aren't any useful classes, so we're banking on the
+    following telltale element configuration:
+        <a name="something"><p><b>...</b></p></a>
+    """
     return (tag.name == "a" and 'name' in tag.attrs
      and tag.contents[0].name == "p"
      and tag.p.contents[0].name == "b")
@@ -77,8 +86,8 @@ def CoursesFromSoup(soup):
     """
     Yields Course objects for the given soup document.
     """
-    for courseTag in soup.find_all(LooksLikeCourseElement):
-        yield Course.FromSoupTag(courseTag)
+    return (Course.FromSoupTag(courseTag)
+     for courseTag in soup.find_all(LooksLikeCourseElement))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
