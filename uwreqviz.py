@@ -9,8 +9,8 @@ import graphviz
 from bs4 import BeautifulSoup
 
 kCourseTitleExpression = re.compile(
- "(?P<number>[A-Z]* [0-9]{3}) (?P<name>[^\(]*)\((?P<credits>[^\)]*)")
-kCourseNumberExpression = re.compile("[A-Z]+ [0-9]+")
+ "(?P<number>[A-Z]+ [\d]+) (?P<name>[^(]*)\((?P<credits>[^)]*)")
+kCourseNumberExpression = re.compile("[A-Z][A-Z ]+[\d]+")
 
 class Course(object):
     """
@@ -23,6 +23,9 @@ class Course(object):
         self.credits = credits
         self.prerequisiteNumbers = prerequisiteNumbers
         self.prerequisiteText = prerequisiteText
+
+    def __repr__(self):
+        return u"Course({0})".format(self.number)
 
     @classmethod
     def FromSoupTag(cls, soupTag):
@@ -65,15 +68,11 @@ class Course(object):
             course.prerequisites = list(filter(None, prerequisites))
 
 def ProduceGraph(url):
-    response = request.urlopen(url)
-    soup = BeautifulSoup(response.read())
-    response.close()
-    courses = CoursesFromSoup(soup)
-    Course.LinkPrerequisites(courses)
+    courses = CoursesFromUrl(url)
 
 def LooksLikeCourseElement(tag):
     """
-    A predicate function for discocvering course tags.
+    A predicate function for discovering course tags.
     Unfortunately, there aren't any useful classes, so we're banking on the
     following telltale element configuration:
         <a name="something"><p><b>...</b></p></a>
@@ -82,12 +81,18 @@ def LooksLikeCourseElement(tag):
      and tag.contents[0].name == "p"
      and tag.p.contents[0].name == "b")
 
-def CoursesFromSoup(soup):
+def CoursesFromUrl(url):
     """
-    Yields Course objects for the given soup document.
+    Returnes a list of Course objects for the given URL with the prerequisites
+    linked.
     """
-    return (Course.FromSoupTag(courseTag)
-     for courseTag in soup.find_all(LooksLikeCourseElement))
+    response = request.urlopen(url)
+    soup = BeautifulSoup(response.read())
+    response.close()
+    courses = [Course.FromSoupTag(courseTag)
+     for courseTag in soup.find_all(LooksLikeCourseElement)]
+    Course.LinkPrerequisites(courses)
+    return courses
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

@@ -70,3 +70,9 @@ def test_LinkPrerequisites():
     assert course2 not in course1.prerequisites
 
     assert 0 == len(course2.prerequisites)
+
+def test_CourseNumberExpr():
+    validCourses = ("CSE 123", "E E 411", "LAW C 333", "CSE 523", "IMMUN 444",
+     "B H 301", "B STR 301", "HSMGMT 500", "SOC WF 497")
+    for num in validCourses:
+        assert kCourseNumberExpression.match(num) is not None
