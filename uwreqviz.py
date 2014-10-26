@@ -5,12 +5,12 @@ import os
 import re
 from urllib import request
 
-import graphviz
+from graphviz import Digraph
 from bs4 import BeautifulSoup
 
 kCourseTitleExpression = re.compile(
- "(?P<number>[A-Z]+ [\d]+) (?P<name>[^(]*)\((?P<credits>[^)]*)")
-kCourseNumberExpression = re.compile("[A-Z][A-Z ]+[\d]+")
+ r"(?P<number>[A-Z]+ [\d]+) (?P<name>[^(]*)\((?P<credits>[^)]*)")
+kCourseNumberExpression = re.compile(r"[A-Z][A-Z ]+[\d]+")
 
 class Course(object):
     """
@@ -26,6 +26,10 @@ class Course(object):
 
     def __repr__(self):
         return u"Course({0})".format(self.number)
+
+    @property
+    def displayName(self):
+        return u"{0} {1}".format(self.number, self.name)
 
     @classmethod
     def FromSoupTag(cls, soupTag):
@@ -70,6 +74,16 @@ class Course(object):
 def ProduceGraph(url):
     courses = CoursesFromUrl(url)
 
+    dot = Digraph()
+
+    for course in courses:
+        dot.node(course.number, course.displayName)
+
+        for prerequisite in course.prerequisites:
+            dot.edge(course.number, prerequisite.number)
+
+    return str(dot)
+
 def LooksLikeCourseElement(tag):
     """
     A predicate function for discovering course tags.
@@ -107,4 +121,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     listingUrl = sys.argv[1]
-    ProduceGraph(listingUrl)
+    print(ProduceGraph(listingUrl))
