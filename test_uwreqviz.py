@@ -37,6 +37,7 @@ def test_FromSoupTag():
     assert course.number == "CSE 120"
     assert course.name == "Computer Science Principles"
     assert course.credits == "5"
+    assert course.rank == "1"
 
     soup = BeautifulSoup(kAnotherValidFragment)
     tag = soup.a
@@ -45,6 +46,7 @@ def test_FromSoupTag():
     assert course.number == "CSE 522"
     assert course.name == "Design and Analysis of Algorithms II"
     assert course.credits == "4"
+    assert course.rank == "5"
     assert course.prerequisiteNumbers == ["CSE 521"]
 
     soup = BeautifulSoup(kYetAnotherValidFragment)
@@ -54,14 +56,15 @@ def test_FromSoupTag():
     assert course.number == "CSE 401"
     assert course.name == "Introduction to Compiler Construction"
     assert course.credits == "4"
+    assert course.rank == "4"
     assert course.prerequisiteNumbers == ["CSE 332", "CSE 351"]
 
 def test_LinkPrerequisites():
-    course1 = Course("CSE 409", "Blah 1", "5", ("CSE 123", "CSE 139"))
-    course2 = Course("CSE 100", "Blah 2", "5", ())
-    course3 = Course("CSE 122", "Blah 3", "5", ("CSE 100",))
-    course4 = Course("CSE 123", "Blah 4", "5", ("CSE 122",))
-    course5 = Course("CSE 139", "Blah 5", "5", ("CSE 100",))
+    course1 = Course("CSE 409", "Blah 1", "5", "4", ("CSE 123", "CSE 139"))
+    course2 = Course("CSE 100", "Blah 2", "5", "1", ())
+    course3 = Course("CSE 122", "Blah 3", "5", "1", ("CSE 100",))
+    course4 = Course("CSE 123", "Blah 4", "5", "1", ("CSE 122",))
+    course5 = Course("CSE 139", "Blah 5", "5", "1", ("CSE 100",))
     Course.LinkPrerequisites((course1, course2, course3, course4, course5))
 
     assert course4 in course1.prerequisites

@@ -4,23 +4,29 @@ import sys
 import os
 import re
 from urllib import request
+import itertools
+from operator import attrgetter
 
 from graphviz import Digraph
 from bs4 import BeautifulSoup
 
 kCourseTitleExpression = re.compile(
- r"(?P<number>[A-Z]+ [\d]+) (?P<name>[^(]*)\((?P<credits>[^)]*)")
+ r"(?P<number>[A-Z][A-Z ]+ [\d]+) (?P<name>[^(]*)\((?P<credits>[^)]*)")
 kCourseNumberExpression = re.compile(r"[A-Z][A-Z ]+[\d]+")
+
+def debug(s):
+    print(s, file=sys.stderr)
 
 class Course(object):
     """
     Represents a course.
     """
-    def __init__(self, number, name, credits,
+    def __init__(self, number, name, credits, rank,
      prerequisiteNumbers=(), prerequisiteText=None):
         self.number = number
         self.name = name
         self.credits = credits
+        self.rank = rank
         self.prerequisiteNumbers = prerequisiteNumbers
         self.prerequisiteText = prerequisiteText
 
@@ -28,14 +34,20 @@ class Course(object):
         return u"Course({0})".format(self.number)
 
     @property
-    def displayName(self):
-        return u"{0} {1}".format(self.number, self.name)
+    def caption(self):
+        result = u"{0} {1}".format(self.number, self.name)
+        if self.prerequisiteText:
+            result += "\n" + self.prerequisiteText
+        return result
 
     @classmethod
     def FromSoupTag(cls, soupTag):
         title = soupTag.p.b.text
         groups = re.match(kCourseTitleExpression, title).groups()
         number, name, credits = (g.strip() for g in groups)
+
+        # Rank is the first digit of the numeric course number. (CSE 423 is rank 4.)
+        rank = next(c for c in number if c.isdigit())
 
         # Now find the prerequisites string.
         courseText = soupTag.text
@@ -45,16 +57,13 @@ class Course(object):
         if i != -1:
             i += len(kReqToken)
             reqsText = courseText[i:courseText.find(".", i)]
-            # To do this really nicely, we should break the prerequisite
-            # language down to their OR/AND components, along with info about
-            # "recommended"/"instructor permission" etc.
             prerequisites = re.findall(kCourseNumberExpression, reqsText)
         else:
             # None listed.
-            prerequisites = []
             reqsText = None
+            prerequisites = []
 
-        return cls(number, name, credits, prerequisites, reqsText)
+        return cls(number, name, credits, rank, prerequisites, reqsText)
 
     @staticmethod
     def LinkPrerequisites(courses):
@@ -76,9 +85,18 @@ def ProduceGraph(url):
 
     dot = Digraph()
 
-    for course in courses:
-        dot.node(course.number, course.displayName)
+    rankGetter = attrgetter("rank")
+    sortedCourses = sorted(courses, key=rankGetter)
 
+    for rank, coursesByRank in itertools.groupby(sortedCourses, rankGetter):
+        subgraph = Digraph(name="cluster_" + rank)
+
+        for course in coursesByRank:
+            subgraph.node(course.number, course.caption)
+
+        dot.subgraph(subgraph)
+
+    for course in courses:
         for prerequisite in course.prerequisites:
             dot.edge(course.number, prerequisite.number)
 
