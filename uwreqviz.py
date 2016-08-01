@@ -120,7 +120,7 @@ def CoursesFromUrl(url):
     linked.
     """
     response = request.urlopen(url)
-    soup = BeautifulSoup(response.read())
+    soup = BeautifulSoup(response.read(), "html.parser")
     response.close()
     courses = [Course.FromSoupTag(courseTag)
      for courseTag in soup.find_all(LooksLikeCourseElement)]
