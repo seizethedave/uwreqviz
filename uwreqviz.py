@@ -6,6 +6,7 @@ import re
 from urllib import request
 import itertools
 from operator import attrgetter
+import argparse
 
 from graphviz import Digraph
 from bs4 import BeautifulSoup
@@ -49,7 +50,7 @@ class Course:
 
         # Rank is the first digit of the numeric course number. (CSE 423 is
         # rank 4.)
-        rank = next(c for c in number if c.isdigit())
+        rank = next(int(c) for c in number if c.isdigit())
 
         # Now find the prerequisites string.
         courseText = soupTag.text
@@ -81,28 +82,6 @@ class Course:
              for p in course.prerequisiteNumbers)
             course.prerequisites = list(filter(None, prerequisites))
 
-def ProduceGraph(url):
-    courses = CoursesFromUrl(url)
-
-    dot = Digraph()
-
-    rankGetter = attrgetter("rank")
-    sortedCourses = sorted(courses, key=rankGetter)
-
-    for rank, coursesByRank in itertools.groupby(sortedCourses, rankGetter):
-        subgraph = Digraph(name="cluster_" + rank)
-
-        for course in coursesByRank:
-            subgraph.node(course.number, course.caption)
-
-        dot.subgraph(subgraph)
-
-    for course in courses:
-        for prerequisite in course.prerequisites:
-            dot.edge(course.number, prerequisite.number)
-
-    return str(dot)
-
 def LooksLikeCourseElement(tag):
     """
     A predicate function for discovering course tags.
@@ -127,17 +106,38 @@ def CoursesFromUrl(url):
     Course.LinkPrerequisites(courses)
     return courses
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print(
-            (
-            "Usage:\n"
-            "   {0} [course listing URL]\n\n"
-            "An example course listing URL can be seen here:\n"
-            "   http://www.washington.edu/students/crscat/cse.html"
-            ).format(os.path.basename(sys.argv[0]))
-        )
-        sys.exit(1)
+def ProduceGraph(args):
+    dot = Digraph()
+    rankGetter = attrgetter("rank")
 
-    listingUrl = sys.argv[1]
-    print(ProduceGraph(listingUrl))
+    courses = CoursesFromUrl(args.url)
+    filteredCourses = list(filter(lambda c: c.rank <= args.maxrank, courses))
+    sortedCourses = sorted(filteredCourses, key=rankGetter)
+
+    for rank, coursesByRank in itertools.groupby(sortedCourses, rankGetter):
+        subgraph = Digraph(name="cluster_%d" % rank)
+
+        for course in coursesByRank:
+            subgraph.node(course.number, course.caption)
+
+        dot.subgraph(subgraph)
+
+    for course in filteredCourses:
+        for prerequisite in course.prerequisites:
+            dot.edge(course.number, prerequisite.number)
+
+    return str(dot)
+
+if __name__ == "__main__":
+    argParser = argparse.ArgumentParser(
+        description="Requirements visualizer for University of Washington class listings.")
+    argParser.add_argument("url", nargs='?', help="URL to read")
+    argParser.add_argument("-r", "--maxrank",
+        help=("restricts course rank to a maximum number. (That is, --maxrank=4 "
+            "restricts to 400-level classes and lower.)"),
+        type=int, default=8, required=False, choices=range(1, 9))
+
+    args = argParser.parse_args()
+
+    if args.url:
+        print(ProduceGraph(args))
