@@ -17,7 +17,7 @@ kCourseNumberExpression = re.compile(r"[A-Z][A-Z ]+[\d]+")
 def debug(s):
     print(s, file=sys.stderr)
 
-class Course(object):
+class Course:
     """
     Represents a course.
     """
@@ -37,7 +37,7 @@ class Course(object):
     def caption(self):
         result = u"{0} {1}".format(self.number, self.name)
         if self.prerequisiteText:
-            result += "\n" + self.prerequisiteText
+            result += "\n(Req: %s)" % (self.prerequisiteText)
         return result
 
     @classmethod
@@ -46,7 +46,8 @@ class Course(object):
         groups = re.match(kCourseTitleExpression, title).groups()
         number, name, credits = (g.strip() for g in groups)
 
-        # Rank is the first digit of the numeric course number. (CSE 423 is rank 4.)
+        # Rank is the first digit of the numeric course number. (CSE 423 is
+        # rank 4.)
         rank = next(c for c in number if c.isdigit())
 
         # Now find the prerequisites string.
