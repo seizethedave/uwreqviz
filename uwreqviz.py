@@ -12,7 +12,8 @@ from bs4 import BeautifulSoup
 
 kCourseTitleExpression = re.compile(
  r"(?P<number>[A-Z][A-Z ]+ [\d]+) (?P<name>[^(]*)\((?P<credits>[^)]*)")
-kCourseNumberExpression = re.compile(r"[A-Z][A-Z ]+[\d]+")
+kCourseNumberExpression = re.compile(r"[A-Z][A-Z ]+[\d]{3}")
+kPrereqExpression = re.compile(r"(?:Prerequisite: )(.*?)\.(?=[\D])")
 
 def debug(s):
     print(s, file=sys.stderr)
@@ -52,12 +53,11 @@ class Course:
 
         # Now find the prerequisites string.
         courseText = soupTag.text
-        kReqToken = "Prerequisite: "
-        i = courseText.find(kReqToken)
 
-        if i != -1:
-            i += len(kReqToken)
-            reqsText = courseText[i:courseText.find(".", i)]
+        prereqStrings = re.findall(kPrereqExpression, courseText)
+
+        if len(prereqStrings) > 0:
+            reqsText = prereqStrings[0]
             prerequisites = re.findall(kCourseNumberExpression, reqsText)
         else:
             # None listed.

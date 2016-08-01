@@ -11,6 +11,10 @@ kAnotherValidFragment = """<a name="cse522"><p><b>CSE 522 Design and Analysis of
 
 kYetAnotherValidFragment = """<a name="cse401"><p><b>CSE 401 Introduction to Compiler Construction (4)</b><br/>Fundamentals of compilers and interpreters; symbol tables; lexical analysis, syntax analysis, semantic analysis, code generation, and optimizations for general purpose programming languages. No credit to students who have taken CSE 413. Prerequisite: CSE 332; CSE 351.<br/><a href="https://uwstudent.washington.edu/student/myplan/course/CSE401" target="_blank">View course details in MyPlan: CSE 401</a></p></a>"""
 
+kCse414Fragment = """<a name="cse414"><p><b>CSE 414 Introduction to Database Systems (4)</b><br/>Introduces database management systems and writing applications that use such systems; data models, query languages, transactions, database tuning, data warehousing, and parallelism. Intended for non-majors. Not open for credit to students who have completed CSE 344. Prerequisite: minimum grade of 2.5 in CSE 143.<br/><a href="https://uwstudent.washington.edu/student/myplan/course/CSE414" target="_blank">View course details in MyPlan: CSE 414</a></p></a>"""
+
+kComplexPrerequisiteFragment = """<a name="cse446"><p><b>CSE 446 Machine Learning (4)</b><br/>Methods for designing systems that learn from data and improve with experience. Supervised learning and predictive modeling: decision trees, rule induction, nearest neighbors, Bayesian methods, neural networks, support vector machines, and model ensembles. Unsupervised learning and clustering. Prerequisite: CSE 332; either STAT 390, STAT 391, or CSE 312.<br/><a href="https://uwstudent.washington.edu/student/myplan/course/CSE446" target="_blank">View course details in MyPlan: CSE 446</a></p></a>"""
+
 def LoadTestingSoup(filename):
     """
     Loads a soup object from one of the testing files in data/.
@@ -58,6 +62,30 @@ def test_FromSoupTag():
     assert course.credits == "4"
     assert course.rank == "4"
     assert course.prerequisiteNumbers == ["CSE 332", "CSE 351"]
+
+def test_PrerequisiteWithMinimum():
+    soup = BeautifulSoup(kCse414Fragment)
+    tag = soup.a
+    course = Course.FromSoupTag(tag)
+    assert course is not None
+    assert course.number == "CSE 414"
+    assert course.name == "Introduction to Database Systems"
+    assert course.credits == "4"
+    assert course.rank == "4"
+    assert course.prerequisiteNumbers == ["CSE 143"]
+
+def test_ComplexPrerequisites():
+    soup = BeautifulSoup(kComplexPrerequisiteFragment)
+    tag = soup.a
+    course = Course.FromSoupTag(tag)
+    assert course is not None
+    assert course.number == "CSE 446"
+    assert course.name == "Machine Learning"
+    assert course.credits == "4"
+    assert course.rank == "4"
+    assert course.prerequisiteNumbers == ["CSE 332", "STAT 390", "STAT 391", "CSE 312"]
+
+
 
 def test_LinkPrerequisites():
     course1 = Course("CSE 409", "Blah 1", "5", "4", ("CSE 123", "CSE 139"))
